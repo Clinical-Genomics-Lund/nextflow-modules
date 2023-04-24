@@ -1,19 +1,6 @@
-//
-// Initialize options with default values.
-//
-def initParams(Map params) {
-    params.args = params.args ?: ''
-    params.publishDir = params.publishDir ?: ''
-    params.publishDirMode = params.publishDirMode ?: ''
-    params.publishDirOverwrite = params.publishDirMode ?: false
-    return params
-}
-
-params = initParams(params)
-
 process sambamba_markdup {
-  label "process_high"
   tag "${sampleName}"
+  scratch params.scratch
   publishDir "${params.publishDir}", 
     mode: params.publishDirMode, 
     overwrite: params.publishDirOverwrite

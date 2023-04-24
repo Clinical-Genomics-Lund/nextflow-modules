@@ -1,19 +1,6 @@
-//
-// Initialize options with default values.
-//
-def initParams(Map params) {
-    params.args = params.args ?: ''
-    params.publishDir = params.publishDir ?: ''
-    params.publishDirMode = params.publishDirMode ?: ''
-    params.publishDirOverwrite = params.publishDirMode ?: false
-    return params
-}
-
-params = initParams(params)
-
 process kraken {
   tag "${sampleName}"
-  label "process_high"
+  scratch params.scratch
   publishDir "${params.publishDir}", 
     mode: params.publishDirMode, 
     overwrite: params.publishDirOverwrite
@@ -23,19 +10,43 @@ process kraken {
     path database
 
   output:
-    tuple val(sampleName), path("${output}"), emit: output
-    tuple val(sampleName), path("${report}"), emit: report
+    tuple val(sampleName), path(output), emit: output
+    tuple val(sampleName), path(report), emit: report
+    path "*versions.yml"                    , emit: versions
 
   script:
+    def args = task.ext.args ?: ''
     output = "${sampleName}_kraken.out"
     report = "${sampleName}_kraken.report"
     """
     kraken2 \\
-    ${args.join(' ')} \\
+    ${args} \\
     --threads ${task.cpus} \\
     --db ${database} \\
     --output ${output} \\
     --report ${report} \\
     ${reads.join(' ')}
+
+    cat <<-END_VERSIONS > ${task.process}_versions.yml
+    ${task.process}:
+     kraken2:
+      version: \$(echo \$(kraken2 --version 2>&1) | sed 's/^.*Kraken version // ; s/ .*//')
+      container: ${task.container}
+    END_VERSIONS
+    """
+
+  stub:
+    output = "${sampleName}_kraken.out"
+    report = "${sampleName}_kraken.report"
+    """
+    touch ${output}
+    touch ${report}
+
+    cat <<-END_VERSIONS > ${task.process}_versions.yml
+    ${task.process}:
+     kraken2:
+      version: \$(echo \$(kraken2 --version 2>&1) | sed 's/^.*Kraken version // ; s/ .*//')
+      container: ${task.container}
+    END_VERSIONS
     """
 }

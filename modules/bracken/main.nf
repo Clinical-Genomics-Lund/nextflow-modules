@@ -1,19 +1,6 @@
-//
-// Initialize options with default values.
-//
-def initParams(Map params) {
-    params.args = params.args ?: ''
-    params.publishDir = params.publishDir ?: ''
-    params.publishDirMode = params.publishDirMode ?: ''
-    params.publishDirOverwrite = params.publishDirMode ?: false
-    return params
-}
-
-params = initParams(params)
-
 process bracken {
   tag "${sampleName}"
-  label "process_high"
+  scratch params.scratch
   publishDir "${params.publishDir}", 
     mode: params.publishDirMode, 
     overwrite: params.publishDirOverwrite
@@ -23,18 +10,42 @@ process bracken {
     path database
 
   output:
-    tuple val(sampleName), path("${output}"), emit: output
-    tuple val(sampleName), path("${outputReport}"), emit: report
+    tuple val(sampleName), path(output)      , emit: output
+    tuple val(sampleName), path(outputReport), emit: report
+    path "*versions.yml"                          , emit: versions
 
   script:
+    def args = task.ext.args ?: ''
     output = "${sampleName}_bracken.out"
     outputReport = "${sampleName}_bracken.report"
     """
     bracken \\
-    ${args.join(' ')} \\
+    ${args} \\
     -d ${database} \\
     -i ${report} \\
     -o ${output} \\
     -w ${outputReport}
+
+    cat <<-END_VERSIONS > ${task.process}_versions.yml
+    ${task.process}:
+     bracken:
+      version: 2.8
+      container: ${task.container}
+    END_VERSIONS
+    """
+
+  stub:
+    output = "${sampleName}_bracken.out"
+    outputReport = "${sampleName}_bracken.report"
+    """
+    touch $output
+    touch $outputReport
+
+    cat <<-END_VERSIONS > ${task.process}_versions.yml
+    ${task.process}:
+     bracken:
+      version: 2.8
+      container: ${task.container}
+    END_VERSIONS
     """
 }

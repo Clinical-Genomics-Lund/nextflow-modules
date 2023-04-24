@@ -1,19 +1,6 @@
-//
-// Initialize options with default values.
-//
-def initParams(Map params) {
-    params.args = params.args ?: ''
-    params.publishDir = params.publishDir ?: ''
-    params.publishDirMode = params.publishDirMode ?: ''
-    params.publishDirOverwrite = params.publishDirMode ?: false
-    return params
-}
-
-params = initParams(params)
-
 process quast {
   tag "${sampleName}"
-  label "process_medium"
+  scratch params.scratch
   publishDir "${params.publishDir}", 
     mode: params.publishDirMode, 
     overwrite: params.publishDirOverwrite
@@ -23,15 +10,35 @@ process quast {
     path reference
 
   output:
-    tuple val(sampleName), path("${assembly.simpleName}.quast.tsv")
+    tuple val(sampleName), path("${assembly.simpleName}.quast.tsv"), emit: qc
+    path "*versions.yml"                                           , emit: versions
 
   script:
+    def args = task.ext.args ?: ''
     sampleName = "${assembly.simpleName}"
-    args = params.args ? params.args : ''
     reference = reference ? "-r ${reference}" : ''
     outputDir = 'quast_outdir'
     """
-    quast.py ${args.join(' ')} ${assembly} ${reference} -o ${outputDir} -t ${task.cpus}
+    quast.py ${args} ${assembly} ${reference} -o ${outputDir} -t ${task.cpus}
     cp ${outputDir}/transposed_report.tsv ${sampleName}.quast.tsv
+
+    cat <<-END_VERSIONS > ${task.process}_versions.yml
+    ${task.process}:
+     quast:
+      version: \$(echo \$(quast.py --version 2>&1) | sed 's/^.*QUAST v//')
+      container: ${task.container}
+    END_VERSIONS
+    """
+
+  stub:
+    """
+    touch ${assembly.simpleName}.quast.tsv
+
+    cat <<-END_VERSIONS > ${task.process}_versions.yml
+    ${task.process}:
+     quast:
+      version: \$(echo \$(quast.py --version 2>&1) | sed 's/^.*QUAST v//')
+      container: ${task.container}
+    END_VERSIONS
     """
 }

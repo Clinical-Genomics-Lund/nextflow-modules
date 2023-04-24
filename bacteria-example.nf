@@ -3,10 +3,6 @@
 // Example of an bacterial analysis pipeline
 nextflow.enable.dsl=2
 
-// define workflow parameters
-params.outdir = 'test_output'
-params.specie = 'saureus'
-
 include { ariba_run } from './modules/ariba/main.nf' addParams( outdir: 'ariba_test_outdir', args: ['--force'] )
 include { ariba_summary } from './modules/ariba/main.nf' addParams( args: ['--col_filter', 'n', '--row_filter', 'n'] )
 include { bracken } from './modules/bracken/main.nf' addParams( args: ['-r', '150'] )
@@ -59,7 +55,7 @@ workflow bacterial_pipeline {
 
     // typing path
     assemblyQc = quast(assembly, genomeReference)
-    mlstResult = mlst(assembly, params.specie)
+    mlstResult = mlst(assembly, params.species)
     chewbbacaResult = chewbbaca_allelecall(maskedAssembly, cgmlstDb, trainingFile)
     chewbbaca_split_results(chewbbacaResult.results)
     chewbbaca_split_missing_loci(chewbbacaResult.missing)

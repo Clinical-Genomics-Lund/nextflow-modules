@@ -1,19 +1,6 @@
-//
-// Initialize options with default values.
-//
-def initParams(Map params) {
-    params.args = params.args ?: ''
-    params.publishDir = params.publishDir ?: ''
-    params.publishDirMode = params.publishDirMode ?: ''
-    params.publishDirOverwrite = params.publishDirMode ?: false
-    return params
-}
-
-params = initParams(params)
-
 process freebayes {
-  label "process_medium"
   tag "${sampleName}"
+  scratch params.scratch
   publishDir "${params.publishDir}", 
     mode: params.publishDirMode, 
     overwrite: params.publishDirOverwrite
@@ -23,11 +10,18 @@ process freebayes {
     tuple path(bam), path(bai) 
 
   output:
-    tuple val(sampleName), path(output)
+    tuple val(sampleName), path(output), emit: vcf
 
   script:
+    def args = task.ext.args ?: ''
     output = "${sampleName}.vcf"
     """
-    freebayes ${params.args.join(' ')} -f ${fasta} ${bam} > ${output}
+    freebayes ${args} -f ${fasta} ${bam} > ${output}
+    """
+
+  stub:
+    output = "${sampleName}.vcf"
+    """
+    touch $output
     """
 }

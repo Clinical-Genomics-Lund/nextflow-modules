@@ -1,19 +1,6 @@
-//
-// Initialize options with default values.
-//
-def initParams(Map params) {
-    params.args = params.args ?: ''
-    params.publishDir = params.publishDir ?: ''
-    params.publishDirMode = params.publishDirMode ?: ''
-    params.publishDirOverwrite = params.publishDirMode ?: false
-    return params
-}
-
-params = initParams(params)
-
 process virulencefinder {
-  label "process_medium"
   tag "${sampleName}"
+  scratch params.scratch
   publishDir "${params.publishDir}", 
     mode: params.publishDirMode, 
     overwrite: params.publishDirOverwrite
@@ -25,7 +12,7 @@ process virulencefinder {
 
   output:
     tuple val(sampleName), path(outputFile), emit: json
-    tuple val(sampleName), path(metaFile), emit: meta
+    tuple val(sampleName), path(metaFile)  , emit: meta
     
   script:
     databasesArgs = databases ? "--databases ${databases.join(',')}" : ""
@@ -43,5 +30,13 @@ process virulencefinder {
     ${databasesArgs}                \\
     --databasePath ${virulenceDb}
     cp data.json ${outputFile}
+    """
+
+ stub:
+    outputFile = "virulencefinder_${sampleName}.json"
+    metaFile = "virulencefinder_meta_${sampleName}.json"
+    """
+    touch $outputFile
+    touch $metaFile
     """
 }
